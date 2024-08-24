@@ -1,3 +1,4 @@
+mod enums;
 mod grid;
 mod game;
 #[cfg(test)]

@@ -1,23 +1,10 @@
 use core::fmt;
-use std::fmt::write;
 use colored::Colorize;
-
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub enum Cell {
-    White,
-    Black,
-    Neutron,
-    Empty
-}
-
-pub enum Winner {
-    White,
-    Black,
-    LastPlayed
-}
+use crate::enums::{Cell, Winner, BoardError};
 
 type Pos = (usize, usize);
 
+///
 pub struct Board {
     grid : Vec<Vec<Cell>>,
     size : usize
@@ -36,26 +23,38 @@ impl fmt::Debug for Board {
 
 impl fmt::Display for Board {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for row in self.grid.iter() {
+        for i in 0..self.size {
+            let letter = (65+i) as u8 as char;
+            write!(f, "{} ", letter)?;
+        }
+        writeln!(f)?;
+        for (i, row) in self.grid.iter().enumerate() {
             for cell in row {
                 let symbol = match cell {
                     Cell::White => "○".white(),
                     Cell::Black => "●".black(),
-                    Cell::Neutron => "◎".red(),
+                    Cell::Neutron => "◎".blue(),
                     Cell::Empty => "·".dimmed(),
                 };
                 write!(f, "{} ", symbol)?;
             }
-            writeln!(f)?;
+            writeln!(f, "{}", i+1)?;
         }
         Ok(())
     }
 }
 
 impl Board {
-    pub fn new(size: usize) -> Result<Board, String> {
+    
+    /// Create a new `Board` of given `size`.
+    /// ## Error
+    /// Return an `Err` if the size is even
+    pub fn new(size: usize) -> Result<Board, BoardError> {
         if size % 2 != 1 {
-            return Err(String::from("Invalid size"));
+            return Err(BoardError::EvenSize);
+        }
+        else if size == 1 {
+            return Err(BoardError::SizeOfOne);
         }
         let mut grid = Vec::with_capacity(size);
         for y in 0..size {
@@ -78,14 +77,17 @@ impl Board {
         Ok(Board{grid,size})
     }
 
+    /// Initialize a new `Board` with the classic size (5x5)
     pub fn new_classic() -> Board {
         return Board::new(5).unwrap();
     }
 
+    /// Initialize a new `Board` with the big size (7x7)
     pub fn new_big() -> Board {
         return Board::new(7).unwrap();
     }
 
+    /// Check the correct number of pieces on the `Board` and if the neutron is present
     pub fn is_valid(&self) -> bool {
         let mut count_w: usize = 0;
         let mut count_b: usize = 0;
@@ -110,6 +112,15 @@ impl Board {
         return false;
     }
 
+    pub fn is_piece_block(&self) -> bool {
+
+    }
+
+    pub fn get_neutron(&self) -> Pos {
+        
+    }
+
+    /// Check if the neutron is blocked and cannot be moved again
     pub fn is_neutron_blocked(&self) -> bool {
         let mut pos = (0,0);
         for (c_pos,&cell) in self.grid.iter().flatten().enumerate() {
@@ -139,39 +150,50 @@ impl Board {
         return true;
     }
 
-    pub fn state_of_the_game(&self) -> Option<Winner> {
+    /// Check if the game ended and the return the potential `Winner`
+    pub fn game_state(&self) -> Option<Winner> {
         if self.grid[0].iter().filter(|&&cell| cell == Cell::Neutron).count() != 0 {
-            return Some(Winner::Black);
-        }
-
-        if self.grid[self.size -1].iter().filter(|&&cell| cell == Cell::Neutron).count() != 0 {
             return Some(Winner::White);
         }
 
+        if self.grid[self.size -1].iter().filter(|&&cell| cell == Cell::Neutron).count() != 0 {
+            return Some(Winner::Black);
+        }
+
         if self.is_neutron_blocked() {
-            return Some(Winner::LastPlayed);
+            return Some(Winner::NeutronIsBlocked);
         }
         
         None
     }
 
-    pub fn get_unchecked(&self, cell : Pos) -> &Cell {
-        let (x,y) = cell;
+    /// Access safely to a `Cell`
+    pub fn get_unchecked(&self, cell_pos : Pos) -> &Cell {
+        let (x,y) = cell_pos;
         if x >= self.size || y >= self.size {
-            panic!("Index out of bound : got {:?} but shape is {:?} !", cell, self.size);
+            panic!("Index out of bound : got {:?} but shape is {:?} !", cell_pos, self.size);
         }
         &self.grid[y][x]
     }
 
-    pub fn get(&self, cell : Pos) -> Option<&Cell> {
-        let (x,y) = cell;
+    /// Access a `Cell`
+    /// ## Panic
+    /// Panic if the given position is out of bound
+    pub fn get(&self, cell_pos : Pos) -> Option<&Cell> {
+        let (x,y) = cell_pos;
         if x >= self.size || y >= self.size {
             return None;
         }
         Some(&self.grid[y][x])
     }
 
-    pub fn set(&mut self, cell : Pos, piece : Cell) {
-        self.grid[cell.1][cell.0] = piece;
+    /// Set the type of `Cell` at a given position
+    pub fn set(&mut self, cell_pos : Pos, cell_type : Cell) {
+        self.grid[cell_pos.1][cell_pos.0] = cell_type;
+    }
+
+    /// Get the `size` of the `Grid`
+    pub fn get_size(&self) -> usize {
+        self.size
     }
 }
