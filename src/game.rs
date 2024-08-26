@@ -23,6 +23,7 @@ impl From<Direction> for Pos {
 
 
 /// Whose turn it is to play and what piece do they have to move
+#[derive(PartialEq)]
 enum Turn {
     WhiteNeutron,
     WhitePiece,
@@ -106,14 +107,66 @@ impl Game {
     }
 
     /// Make the player move the Neutron with respect to the rules of the game
-    fn move_neutron(&mut self) {
-        let direction = GameIO::ask_user_for_direction();
+    fn player_turn_neutron(&mut self) {
+        let pos = self.board.get_neutron();
+        let mut ok = false;
+
+        while !ok {
+            match GameIO::ask_user_for_direction() {
+                Err(_) => continue,
+                Ok(direction) => {
+
+                    match self.move_piece(pos, direction) {
+                        Err(GameError::DidNotMoved) => continue,
+                        Err(e) => panic!("Unexpected error : {:?}",e),
+                        Ok(()) => {
+                            ok = true;
+                        }
+                    }
+                }
+            }
+        }
+        
         
     }
 
     ///
-    fn move_player(&mut self, turn : Turn) {
+    fn player_turn_piece(&mut self, turn : Turn) {
+        let mut ok = false;
 
+        while !ok {
+            match GameIO::ask_user_for_position() {
+                Err(_) => continue,
+                Ok(pos) => {
+                    match *self.board.get_unchecked(pos) {
+                        Cell::Black => {
+                            if turn == Turn::WhitePiece {
+                                continue;
+                            }
+                        },
+                        Cell::White => {
+                            if turn == Turn::BlackPiece {
+                                continue;
+                            }
+                        },
+                        _ => continue
+                    }
+                    match GameIO::ask_user_for_direction() {
+                        Err(_) => continue,
+                        Ok(direction) => {
+
+                            match self.move_piece(pos, direction) {
+                                Err(GameError::DidNotMoved) => continue,
+                                Err(e) => panic!("Unexpected error : {:?}",e),
+                                Ok(()) => {
+                                    ok = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     
@@ -127,19 +180,19 @@ impl Game {
             self.show_board();
             match self.turn {
                 Turn::WhiteNeutron => {
-                    self.move_neutron();
+                    self.player_turn_neutron();
                     self.turn = Turn::WhitePiece;
                 },
                 Turn::WhitePiece => {
-                    self.move_player(Turn::WhitePiece); // Vérif qu'une pièce BLANCHE a été bougé
+                    self.player_turn_piece(Turn::WhitePiece); // Vérif qu'une pièce BLANCHE a été bougé
                     self.turn = Turn::BlackNeutron;
                 },
                 Turn::BlackNeutron => {
-                    self.move_neutron();
+                    self.player_turn_neutron();
                     self.turn = Turn::BlackPiece;
                 },
                 Turn::BlackPiece => {
-                    self.move_player(Turn::BlackPiece); // Vérif qu'une pièce NOIRE a été bougé
+                    self.player_turn_piece(Turn::BlackPiece); // Vérif qu'une pièce NOIRE a été bougé
                     self.turn = Turn::WhiteNeutron;
                 }
             }

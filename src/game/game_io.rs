@@ -10,21 +10,21 @@ pub struct GameIO;
 impl GameIO {
 
     /// Check if the coordinates have the right syntax (A1, B2, C3, ...)
-    pub fn is_coordinates_valid(input: String) -> bool {
+    pub fn is_coordinates_valid(input: String) -> bool { // Basile tu as peut-être envie d'avoir &String en paramètre
         let input = input.trim().to_uppercase();
         let regex = Regex::new(r"^[A-Z][1-9]\d*$").unwrap();
         return regex.is_match(&input);
     }
 
     /// Check if the direction are numbers between 1 and 8
-    pub fn is_direction_valid(input: String) -> bool {
+    pub fn is_direction_valid(input: String) -> bool { // La même
         let input = input.trim().to_uppercase();
         let regex = Regex::new(r"^[1-8]$").unwrap();
         return regex.is_match(&input);
     }
 
     /// Return the coordinates of the piece the user wants to move
-    pub fn get_piece_from_input(input: String) -> (usize, usize) {
+    pub fn get_piece_from_input(input: String) -> (usize, usize) { // Ici c'est ok
         let input = input.trim().to_uppercase();
         let x = input.chars().nth(0).unwrap() as usize - 65;
         let y = input[1..].parse::<usize>().unwrap() - 1;
@@ -35,7 +35,7 @@ impl GameIO {
     pub fn ask_user_for_direction() -> Result<Direction, GameIOError> {
         let mut input = String::new();
 
-        while (!GameIO::is_direction_valid(input)) {
+        while !GameIO::is_direction_valid(input.clone()) {
             println!("Please enter a direction {} :", "1-8".green());
             println!("{}", "[1] Up [2] Up Right [3] Right [4] Down Right".dimmed()
             );
@@ -58,5 +58,9 @@ impl GameIO {
             8 => Ok(Direction::UpLeft),
             _ => Err(GameIOError::InvalidDirection),
         }
+    }
+
+    pub fn ask_user_for_position() -> Result<(usize,usize), GameIOError> {
+        todo!();
     }
 }

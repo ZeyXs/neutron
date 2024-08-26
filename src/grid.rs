@@ -112,23 +112,9 @@ impl Board {
         return false;
     }
 
-    pub fn is_piece_block(&self) -> bool {
-
-    }
-
-    pub fn get_neutron(&self) -> Pos {
-        
-    }
-
-    /// Check if the neutron is blocked and cannot be moved again
-    pub fn is_neutron_blocked(&self) -> bool {
-        let mut pos = (0,0);
-        for (c_pos,&cell) in self.grid.iter().flatten().enumerate() {
-            if cell == Cell::Neutron {
-                pos = ((c_pos)/self.size, (c_pos)%self.size);
-                break;
-            }
-        }
+    /// Check if the piece at given `pos` can be moved. Does NOT check if there is
+    /// an actual piece
+    fn is_piece_blocked(&self, pos : Pos) -> bool {
         for dy in 0..2_usize {
             if (dy == 0 && pos.1 == 0) || (dy == 2 && pos.1 == self.size -1) {
                 continue;
@@ -148,6 +134,24 @@ impl Board {
         }
 
         return true;
+    }
+
+    /// Return the position of the Neutron on the `Board`
+    pub fn get_neutron(&self) -> Pos {
+        for (c_pos,&cell) in self.grid.iter().flatten().enumerate() {
+            if cell == Cell::Neutron {
+                return ((c_pos)/self.size, (c_pos)%self.size);
+            }
+        }
+        panic!("WHERE IS THE NEUTRON ON THE BOARD ?!!?") // Never come here
+    }
+
+    /// Check if the neutron is blocked and cannot be moved again
+    pub fn is_neutron_blocked(&self) -> bool {
+        self.is_piece_blocked(self.get_neutron())
+        // Si ça fonctionne pas car moved 2 fois ->
+        // let pos = self.get_neutron();
+        // self.is_piece_blocked(pos)
     }
 
     /// Check if the game ended and the return the potential `Winner`
