@@ -31,8 +31,8 @@ impl fmt::Display for Board {
         for (i, row) in self.grid.iter().enumerate() {
             for cell in row {
                 let symbol = match cell {
-                    Cell::White => "○".white(),
-                    Cell::Black => "●".black(),
+                    Cell::Black => "○".white(),
+                    Cell::White => "●".black(),
                     Cell::Neutron => "◎".blue(),
                     Cell::Empty => "·".dimmed(),
                 };
@@ -115,16 +115,16 @@ impl Board {
     /// Check if the piece at given `pos` can be moved. Does NOT check if there is
     /// an actual piece
     fn is_piece_blocked(&self, pos : Pos) -> bool {
-        for dy in 0..2_usize {
+        for dy in 0..3_usize { // Imagine dy range from -1 to 1 
             if (dy == 0 && pos.1 == 0) || (dy == 2 && pos.1 == self.size -1) {
                 continue;
             }
-            for dx in 0..2_usize {
+            for dx in 0..3_usize { // Same
                 if (dx == 0 && pos.0 == 0) || (dx == 2 && pos.0 == self.size -1) {
                     continue;
                 }
 
-                if !(dx == dy && dx == 1) {
+                if !(dx == dy && dx == 1) { // It's the actual piece, not a neighbour
                     let cell = self.grid[pos.1 + dy -1][pos.0 + dx -1];
                     if cell == Cell::Empty {
                         return false;
@@ -132,7 +132,7 @@ impl Board {
                 }
             }
         }
-
+        
         return true;
     }
 
@@ -140,28 +140,25 @@ impl Board {
     pub fn get_neutron(&self) -> Pos {
         for (c_pos,&cell) in self.grid.iter().flatten().enumerate() {
             if cell == Cell::Neutron {
-                return ((c_pos)/self.size, (c_pos)%self.size);
+                return ((c_pos)%self.size, (c_pos)/self.size);
             }
         }
-        panic!("WHERE IS THE NEUTRON ON THE BOARD ?!!?") // Never come here
+        unreachable!();
     }
 
     /// Check if the neutron is blocked and cannot be moved again
     pub fn is_neutron_blocked(&self) -> bool {
         self.is_piece_blocked(self.get_neutron())
-        // Si ça fonctionne pas car moved 2 fois ->
-        // let pos = self.get_neutron();
-        // self.is_piece_blocked(pos)
     }
 
     /// Check if the game ended and the return the potential `Winner`
     pub fn game_state(&self) -> Option<Winner> {
         if self.grid[0].iter().filter(|&&cell| cell == Cell::Neutron).count() != 0 {
-            return Some(Winner::White);
+            return Some(Winner::Black);
         }
 
         if self.grid[self.size -1].iter().filter(|&&cell| cell == Cell::Neutron).count() != 0 {
-            return Some(Winner::Black);
+            return Some(Winner::White);
         }
 
         if self.is_neutron_blocked() {
@@ -171,7 +168,9 @@ impl Board {
         None
     }
 
-    /// Access safely to a `Cell`
+    /// Access a `Cell`
+    /// ## Panic
+    /// Panic if the given position is out of bound
     pub fn get_unchecked(&self, cell_pos : Pos) -> &Cell {
         let (x,y) = cell_pos;
         if x >= self.size || y >= self.size {
@@ -180,9 +179,8 @@ impl Board {
         &self.grid[y][x]
     }
 
-    /// Access a `Cell`
-    /// ## Panic
-    /// Panic if the given position is out of bound
+    
+    /// Access safely to a `Cell`
     pub fn get(&self, cell_pos : Pos) -> Option<&Cell> {
         let (x,y) = cell_pos;
         if x >= self.size || y >= self.size {

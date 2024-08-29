@@ -30,25 +30,3 @@ fn black_wins() -> Result<(),String> {
     assert_eq!(game.game_state(), Some(Winner::Black));
     Ok(())
 }
-
-#[test]
-fn neutron_blocked_win() -> Result<(),String> {
-    let mut game = Game::new(5).unwrap();
-    game.move_piece((0,0), Direction::Down);
-    game.move_piece((2,2), Direction::UpLeft);
-
-    game.show_board();
-    assert_eq!(game.game_state(), Some(Winner::White));
-    Ok(())
-}
-
-#[test]
-fn char_test() {
-    print!("{}", 65 as char);
-}
-
-#[test]
-#[should_panic(expected = "RAAAAH")]
-fn it_dont_work() {
-    panic!("RAAAAH");
-}

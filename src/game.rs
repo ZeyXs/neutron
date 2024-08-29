@@ -24,7 +24,7 @@ impl From<Direction> for Pos {
 
 /// Whose turn it is to play and what piece do they have to move
 #[derive(PartialEq)]
-enum Turn {
+pub enum Turn {
     WhiteNeutron,
     WhitePiece,
     BlackNeutron,
@@ -54,6 +54,16 @@ impl Game {
         }
     }
 
+    /// Preset of 5x5
+    pub fn new_classic() -> Game {
+        return Game { board: Board::new_classic(), turn: Turn::WhitePiece }
+    }
+
+    /// Preset of 7x7
+    pub fn new_big() -> Game {
+        return Game { board: Board::new_big(), turn: Turn::WhitePiece }
+    }
+
     pub fn show_board(&self) {
         println!("{}", self.board);
     }
@@ -65,22 +75,24 @@ impl Game {
                 Turn::WhiteNeutron => Some(Winner::Black),
                 _ => None
             },
-            Some(w) => Some(w),
-            None => None
+            other => other
         }
     }
 
     /// Check if the move is inside the `Board`
     fn is_move_valid(&self, piece: (i8, i8)) -> bool {
-        let x = piece.0 as usize;
-        let y = piece.1 as usize;
+        let (x,y) = piece;
+        if x < 0 || y < 0 {
+            return false;
+        }
+        let (x,y) = (x as usize, y as usize);
         return x < self.board.get_size() && y < self.board.get_size() && *self.board.get_unchecked((x,y)) == Cell::Empty;
     }
 
     /// Evaluate the farthest position that a piece can travel in a given `Direction`
-    fn get_max_pos(&self, piece : (usize, usize), direction : (i8, i8)) -> (usize, usize) {
-        let mut x = piece.0 as i8;
-        let mut y = piece.1 as i8;
+    fn get_max_pos(&self, piece : (usize, usize), direction : Direction) -> (usize, usize) {
+        let (mut x, mut y) = (piece.0 as i8, piece.1 as i8);
+        let direction : (i8,i8) = direction.into();
 
         while self.is_move_valid((x+direction.0, y+direction.1)) {
             x += direction.0;
@@ -91,12 +103,17 @@ impl Game {
     }
 
     /// Move a piece in a given `Direction`
+    /// ## Panic
+    /// Panics if `cell_pos` is NOT in the board of the game
+    /// ## Error
+    /// Return a `TryToMoveEmptyCell` error if `cell_pos` is an empty cell.
+    /// Return a `DidNotMoved` error the board is the same as before after the move
     pub fn move_piece(&mut self, cell_pos : (usize, usize), direction : Direction) -> Result<(),GameError> {
         let cell = *self.board.get_unchecked(cell_pos);
         if cell == Cell::Empty {
             return Err(GameError::TryToMoveEmptyCell);
         } else {
-            let new_pos = self.get_max_pos(cell_pos, direction.into());
+            let new_pos = self.get_max_pos(cell_pos, direction);
             if new_pos == cell_pos {
                 return Err(GameError::DidNotMoved);
             }
@@ -109,62 +126,57 @@ impl Game {
     /// Make the player move the Neutron with respect to the rules of the game
     fn player_turn_neutron(&mut self) {
         let pos = self.board.get_neutron();
-        let mut ok = false;
+        GameIO::give_input_format_for_direction();
+        loop {
+            let direction = GameIO::ask_user_for_direction();
+            match self.move_piece(pos, direction) {
+                Ok(()) => return,
+                Err(GameError::TryToMoveEmptyCell) => unreachable!(),
+                Err(GameError::DidNotMoved) => continue,
+            }
+        }
+    }
 
-        while !ok {
-            match GameIO::ask_user_for_direction() {
-                Err(_) => continue,
-                Ok(direction) => {
+    /// Make the player, who's turn it is, move one of their piece with respect to the rules
+    fn player_turn_piece(&mut self) {
+        let mut piece_pos : (usize, usize);
+        GameIO::give_input_format_for_position();
+        loop {
+            let pos = GameIO::ask_user_for_position();
+            match self.board.get(pos) { // Is the position in the board ?
 
-                    match self.move_piece(pos, direction) {
-                        Err(GameError::DidNotMoved) => continue,
-                        Err(e) => panic!("Unexpected error : {:?}",e),
-                        Ok(()) => {
-                            ok = true;
-                        }
+                None => continue,
+                Some(cell) => {
+
+                    match *cell { // Is it player's piece ?
+                        Cell::White => { // Wrong color : black try to move white piece
+                            if self.turn == Turn::BlackPiece {
+                                continue;
+                            }
+                        },
+                        Cell::Black => { // Wrong color : white try to move black piece
+                            if self.turn == Turn::WhitePiece {
+                                continue;
+                            }
+                        },
+                        _ => continue, // Not a piece
                     }
+
+                    piece_pos = pos;
+                    break;
                 }
             }
         }
-        
-        
-    }
 
-    ///
-    fn player_turn_piece(&mut self, turn : Turn) {
-        let mut ok = false;
-
-        while !ok {
-            match GameIO::ask_user_for_position() {
-                Err(_) => continue,
-                Ok(pos) => {
-                    match *self.board.get_unchecked(pos) {
-                        Cell::Black => {
-                            if turn == Turn::WhitePiece {
-                                continue;
-                            }
-                        },
-                        Cell::White => {
-                            if turn == Turn::BlackPiece {
-                                continue;
-                            }
-                        },
-                        _ => continue
-                    }
-                    match GameIO::ask_user_for_direction() {
-                        Err(_) => continue,
-                        Ok(direction) => {
-
-                            match self.move_piece(pos, direction) {
-                                Err(GameError::DidNotMoved) => continue,
-                                Err(e) => panic!("Unexpected error : {:?}",e),
-                                Ok(()) => {
-                                    ok = true;
-                                }
-                            }
-                        }
-                    }
+        GameIO::give_input_format_for_direction();
+        loop {
+            let direction = GameIO::ask_user_for_direction();
+            match self.move_piece(piece_pos, direction) {
+                Ok(_) => {
+                    return;
                 }
+                Err(GameError::TryToMoveEmptyCell) => unreachable!(),
+                Err(GameError::DidNotMoved) => continue,
             }
         }
     }
@@ -176,15 +188,17 @@ impl Game {
     pub fn play(&mut self) -> Winner {
         let mut winner = None;
         while winner == None {
-
+            
+            GameIO::reset_terminal_screen();
             self.show_board();
+            GameIO::annonce_move(&self.turn);
             match self.turn {
                 Turn::WhiteNeutron => {
                     self.player_turn_neutron();
                     self.turn = Turn::WhitePiece;
                 },
                 Turn::WhitePiece => {
-                    self.player_turn_piece(Turn::WhitePiece); // Vérif qu'une pièce BLANCHE a été bougé
+                    self.player_turn_piece();
                     self.turn = Turn::BlackNeutron;
                 },
                 Turn::BlackNeutron => {
@@ -192,13 +206,15 @@ impl Game {
                     self.turn = Turn::BlackPiece;
                 },
                 Turn::BlackPiece => {
-                    self.player_turn_piece(Turn::BlackPiece); // Vérif qu'une pièce NOIRE a été bougé
+                    self.player_turn_piece();
                     self.turn = Turn::WhiteNeutron;
                 }
             }
             winner = self.game_state();
         }
 
+        GameIO::reset_terminal_screen();
+        self.show_board();
         winner.unwrap()
     }
 }

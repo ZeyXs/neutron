@@ -40,12 +40,5 @@ pub enum BoardError {
 #[derive(Debug)]
 pub enum GameError {
     TryToMoveEmptyCell,
-    DidNotMoved,
-    Invalid
-}
-
-/// Errors in Game IO
-#[derive(Debug)]
-pub enum GameIOError {
-    InvalidDirection,
+    DidNotMoved
 }

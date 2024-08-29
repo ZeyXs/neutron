@@ -4,9 +4,10 @@ mod game;
 #[cfg(test)]
 mod tests;
 
-use colored::Colorize;
+use game::Game;
 
 fn main() {
-    println!("You're {}.", "Sus".red());
+    let mut game = Game::new_classic();
+    let winner = game.play();
+    println!("{:?}",winner);
 }
-    
